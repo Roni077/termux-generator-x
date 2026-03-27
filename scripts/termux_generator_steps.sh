@@ -266,6 +266,10 @@ build_apps() {
             popd
         done
     else
+        if [[ "${CI-}" == "true" ]]; then
+            export JAVA_HOME=/usr/lib/jvm/temurin-21-jdk-amd64
+            sudo update-alternatives --set java "$JAVA_HOME/bin/java"
+        fi
         ./gradlew assembleDebug
     fi
 
