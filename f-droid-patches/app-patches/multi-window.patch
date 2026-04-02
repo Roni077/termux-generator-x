@@ -1565,3 +1565,76 @@ index a2a47733aa..a856725555 100644
                  setCurrentSession(session);
              }
          }
+From d06f746d397f32838c64bc1b78ce7e506be12fad Mon Sep 17 00:00:00 2001
+From: ozwaldorf <self@ossian.dev>
+Date: Thu, 2 Apr 2026 14:41:10 -0400
+Subject: [PATCH 9/9] feat: add window long-press app shortcut
+
+---
+ .../java/com/termux/app/TermuxActivity.java     | 17 ++++++++++++-----
+ app/src/main/res/xml/shortcuts.xml              | 15 +++++++++++++++
+ .../termux/shared/termux/TermuxConstants.java   |  3 +++
+ 3 files changed, 30 insertions(+), 5 deletions(-)
+
+--- a/termux-app/app/src/main/java/com/termux/app/TermuxActivity.java
++++ b/termux-app/app/src/main/java/com/termux/app/TermuxActivity.java
+@@ -456,11 +456,18 @@ public void onServiceConnected(ComponentName componentName, IBinder service) {
+             // then the original intent will be re-delivered, resulting in a new session being re-added
+             // each time.
+             if (!mIsActivityRecreated && intent != null && Intent.ACTION_RUN.equals(intent.getAction())) {
+-                // Android 7.1 app shortcut from res/xml/shortcuts.xml.
+-                boolean isFailSafe = intent.getBooleanExtra(TERMUX_ACTIVITY.EXTRA_FAILSAFE_SESSION, false);
+-                mTermuxTerminalSessionActivityClient.addNewSession(isFailSafe, null);
+-            } else {
+-                // In multi-window mode, try to atomically claim first unattached session
++                if (intent.getBooleanExtra(TERMUX_ACTIVITY.EXTRA_NEW_WINDOW, false)) {
++                    // Android 7.1 app shortcut: open a new window
++                    addNewWindow();
++                } else {
++                    // Android 7.1 app shortcut from res/xml/shortcuts.xml.
++                    boolean isFailSafe = intent.getBooleanExtra(TERMUX_ACTIVITY.EXTRA_FAILSAFE_SESSION, false);
++                    mTermuxTerminalSessionActivityClient.addNewSession(isFailSafe, null);
++                }
++            }
++
++            // Ensure this activity is attached to a session
++            if (getCurrentSession() == null) {
+                 TerminalSession sessionToAttach = mTermuxService.claimFirstUnattachedSession(mActivityId);
+                 if (sessionToAttach != null) {
+                     mTermuxTerminalSessionActivityClient.setCurrentSession(sessionToAttach);
+--- a/termux-app/app/src/main/res/xml/shortcuts.xml
++++ b/termux-app/app/src/main/res/xml/shortcuts.xml
+@@ -23,6 +23,21 @@
+             android:name="android.shortcut.conversation"/>
+     </shortcut>
+ 
++    <shortcut
++        android:shortcutId="new_window"
++        android:enabled="true"
++        android:icon="@drawable/ic_new_session"
++        android:shortcutShortLabel="@string/action_new_window"
++        tools:targetApi="n_mr1">
++        <intent
++            android:action="android.intent.action.RUN"
++            android:targetPackage="com.termux"
++            android:targetClass="com.termux.app.TermuxActivity"
++            android:name="android.shortcut.conversation">
++            <extra android:name="com.termux.app.new_window" android:value="true"/>
++        </intent>
++    </shortcut>
++
+     <shortcut
+         android:shortcutId="new_failsafe_session"
+         android:enabled="true"
+--- a/termux-app/termux-shared/src/main/java/com/termux/shared/termux/TermuxConstants.java
++++ b/termux-app/termux-shared/src/main/java/com/termux/shared/termux/TermuxConstants.java
+@@ -945,6 +945,9 @@ public static final class TERMUX_ACTIVITY {
+             /** Intent extra for if termux failsafe session needs to be started and is used by {@link TERMUX_ACTIVITY} and {@link TERMUX_SERVICE#ACTION_STOP_SERVICE} */
+             public static final String EXTRA_FAILSAFE_SESSION = TermuxConstants.TERMUX_PACKAGE_NAME + ".app.failsafe_session"; // Default: "com.termux.app.failsafe_session"
+ 
++            /** Intent extra for if a new window should be opened instead of a new session */
++            public static final String EXTRA_NEW_WINDOW = TermuxConstants.TERMUX_PACKAGE_NAME + ".app.new_window"; // Default: "com.termux.app.new_window"
++
+ 
+             /** Intent action to make termux app notify user that a crash happened. */
+             public static final String ACTION_NOTIFY_APP_CRASH = TermuxConstants.TERMUX_PACKAGE_NAME + ".app.notify_app_crash"; // Default: "com.termux.app.notify_app_crash"
