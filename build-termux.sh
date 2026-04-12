@@ -27,6 +27,7 @@ DISABLE_X11=""
 
 source "$TERMUX_GENERATOR_HOME/scripts/termux_generator_utils.sh"
 source "$TERMUX_GENERATOR_HOME/scripts/termux_generator_steps.sh"
+source "$TERMUX_GENERATOR_HOME/scripts/termux_generator_all.sh"
 
 # Anzeige der Hilfe
 show_usage() {

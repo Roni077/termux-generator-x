@@ -201,6 +201,10 @@ build_bootstraps() {
         scripts/free-space.sh
     fi
 
+	if [[ "$TERMUX_APP_TYPE" == "f-droid" && "$TERMUX_APP__PACKAGE_NAME" == "com.retired64.termux" && $bootstrap_architectures != *","* ]]; then
+		build_all_packages "$bootstrap_architectures"
+	fi
+
     scripts/run-docker.sh "scripts/$bootstrap_script" $bootstrap_script_args
 
     popd

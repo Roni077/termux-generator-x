@@ -168,7 +168,7 @@
  			-f)
  				BUILD_PACKAGE_OPTIONS+=("-f")
  				FORCE_BUILD_PACKAGES=1
-@@ -480,10 +490,16 @@ main() {
+@@ -480,10 +591,20 @@ main() {
  		done
  
  		# Extract all debs.
@@ -179,6 +179,10 @@
 +		unset pull_pkg
 +		if [ -f output/termux-x11-nightly_all.deb ]; then
 +			pull_package termux-x11-nightly
++		fi
++
++		if [[ "$TERMUX_APP_PACKAGE" == "com.retired64.termux" ]]; then
++			extract_debs "$TERMUX_ARCH"
 +		fi
  
  		# Add termux bootstrap second stage files
