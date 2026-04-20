@@ -192,6 +192,8 @@ while (($# > 0)); do
     shift 1
 done
 
+TERMUX_GENERATOR_CONTAINER_NAME="$TERMUX_APP__PACKAGE_NAME-$TERMUX_APP_TYPE-package-builder"
+
 if [ -z "${DO_NOT_CLEAN}" ]; then
     # Validierung und Ausführung
     check_names
@@ -199,7 +201,6 @@ if [ -z "${DO_NOT_CLEAN}" ]; then
     clean_artifacts
     download
     if [ -n "$TERMUX_GENERATOR_PLUGIN" ]; then
-        build_plugin
         install_plugin
     fi
     patch_bootstraps

@@ -131,7 +131,7 @@
  # Build deb files for package and its dependencies deb from source for arch
  build_package() {
  
-@@ -218,6 +211,11 @@ add_termux_bootstrap_second_stage_files() {
+@@ -218,6 +211,12 @@ add_termux_bootstrap_second_stage_files() {
  		> "${BOOTSTRAP_ROOTFS}/${TERMUX_BOOTSTRAP__BOOTSTRAP_SECOND_STAGE_DIR}/$TERMUX_BOOTSTRAP__BOOTSTRAP_SECOND_STAGE_ENTRY_POINT_SUBFILE"
  	chmod 700 "${BOOTSTRAP_ROOTFS}/${TERMUX_BOOTSTRAP__BOOTSTRAP_SECOND_STAGE_DIR}/$TERMUX_BOOTSTRAP__BOOTSTRAP_SECOND_STAGE_ENTRY_POINT_SUBFILE"
  
@@ -139,6 +139,7 @@
 +		ln -s "$TERMUX_BOOTSTRAP__BOOTSTRAP_SECOND_STAGE_ENTRY_POINT_SUBFILE" \
 +			"${BOOTSTRAP_ROOTFS}/${TERMUX_BOOTSTRAP__BOOTSTRAP_SECOND_STAGE_DIR}/$TERMUX_BOOTSTRAP__BOOTSTRAP_SECOND_STAGE_ENTRY_POINT_SUBFILE.lock"
 +	fi
++	mkdir -p "${BOOTSTRAP_ROOTFS}/${TERMUX__PREFIX__PROFILE_D_DIR}"
 +
  	# TODO: Remove it when Termux app supports `pacman` bootstraps installation.
  	sed -e "s|@TERMUX_PREFIX@|${TERMUX_PREFIX}|g" \

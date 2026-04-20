@@ -43,8 +43,8 @@ check_names() {
 }
 
 clean_docker() {
-    docker container kill termux-generator-package-builder 2> /dev/null || true
-    docker container rm -f termux-generator-package-builder 2>/dev/null || true
+    docker container kill "$TERMUX_GENERATOR_CONTAINER_NAME" 2> /dev/null || true
+    docker container rm -f "$TERMUX_GENERATOR_CONTAINER_NAME" 2>/dev/null || true
     if ! docker image rm ghcr.io/termux/package-builder 2>/dev/null; then
         echo "[*] Warning: not removing Docker package builder image for \"F-Droid\" Termux, likely because it is either not downloaded yet, or in use by other containers."
     fi
@@ -82,17 +82,7 @@ download() {
     git clone --depth 1 --recursive https://github.com/termux/termux-x11.git        termux-apps-main/termux-x11
 }
 
-build_plugin() {
-    pushd "plugins/$TERMUX_GENERATOR_PLUGIN"
-
-    ./gradlew build
-
-    popd
-}
-
 install_plugin() {
-    mkdir -p termux-apps-main/termux-app/src/main/assets/
-    cp -rf "plugins/$TERMUX_GENERATOR_PLUGIN" termux-apps-main/termux-app/src/main/assets/
     apply_patches "plugins/$TERMUX_GENERATOR_PLUGIN/$TERMUX_APP_TYPE-patches/bootstrap-patches" termux-packages-main
     apply_patches "plugins/$TERMUX_GENERATOR_PLUGIN/$TERMUX_APP_TYPE-patches/app-patches" termux-apps-main
 }
@@ -108,6 +98,8 @@ patch_bootstraps() {
     fi
 
     apply_patches "$TERMUX_APP_TYPE-patches/bootstrap-patches" termux-packages-main
+
+    portable_sed_i -e "s|termux-package-builder|$TERMUX_GENERATOR_CONTAINER_NAME|g" termux-packages-main/scripts/run-docker.sh
 
     local bashrc="termux-packages-main/packages/bash/etc-bash.bashrc"
 
@@ -210,6 +202,12 @@ build_bootstraps() {
     if [[ "$TERMUX_APP_TYPE" == "f-droid" && "$TERMUX_APP__PACKAGE_NAME" == "com.retired64.termux" && $bootstrap_architectures != *","* ]]; then
         build_all_packages "$bootstrap_architectures"
     fi
+
+    rm -rf .github/workflows/*
+    sed -e "s|@TERMUX_APP__PACKAGE_NAME@|$TERMUX_APP__PACKAGE_NAME|g" \
+        -e "s|@BOOTSTRAP_BUILD_COMMAND@|scripts/$bootstrap_script $bootstrap_script_args|g" \
+        "$TERMUX_GENERATOR_HOME/scripts/build-bootstraps.yml.in" \
+        > .github/workflows/build-bootstraps.yml
 
     scripts/run-docker.sh "scripts/$bootstrap_script" $bootstrap_script_args
 

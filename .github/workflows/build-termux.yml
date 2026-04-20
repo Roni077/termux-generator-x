@@ -74,6 +74,9 @@ on:
         required: false
         type: boolean
         default: true
+      plugin:
+        description: "Specify plugin."
+        required: false
 
 jobs:
   build:
@@ -129,8 +132,28 @@ jobs:
       - name: Set --disable-x11
         if: "${{ github.event.inputs.x11 == 'false' }}"
         run: echo "DISABLE_X11=--disable-x11" >> $GITHUB_ENV
+      - name: Set --plugin
+        if: "${{ github.event.inputs.plugin != '' }}"
+        run: echo "PLUGIN=--plugin ${{ github.event.inputs.plugin }}" >> $GITHUB_ENV
       - name: Build Termux
-        run: ./build-termux.sh $ADDITIONAL_PACKAGES $TERMUX_APP__PACKAGE_NAME $TERMUX_APP_TYPE $BOOTSTRAP_ARCHITECTURES $DISABLE_BOOTSTRAP_SECOND_STAGE $ENABLE_SSH_SERVER $DISABLE_BOOTSTRAP $DISABLE_TERMINAL $DISABLE_TASKER $DISABLE_FLOAT $DISABLE_WIDGET $DISABLE_API $DISABLE_BOOT $DISABLE_STYLING $DISABLE_GUI $DISABLE_X11
+        run: ./build-termux.sh \
+                $ADDITIONAL_PACKAGES \
+                $TERMUX_APP__PACKAGE_NAME \
+                $TERMUX_APP_TYPE \
+                $BOOTSTRAP_ARCHITECTURES \
+                $DISABLE_BOOTSTRAP_SECOND_STAGE \
+                $ENABLE_SSH_SERVER \
+                $DISABLE_BOOTSTRAP \
+                $DISABLE_TERMINAL \
+                $DISABLE_TASKER \
+                $DISABLE_FLOAT \
+                $DISABLE_WIDGET \
+                $DISABLE_API \
+                $DISABLE_BOOT \
+                $DISABLE_STYLING \
+                $DISABLE_GUI \
+                $DISABLE_X11 \
+                $PLUGIN
       - name: Upload artifacts
         uses: actions/upload-artifact@v4.6.0
         with:

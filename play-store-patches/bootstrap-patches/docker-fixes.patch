@@ -29,15 +29,6 @@
  
 --- a/scripts/run-docker.sh
 +++ b/scripts/run-docker.sh
-@@ -3,7 +3,7 @@ set -e -u
- 
- TERMUX_SCRIPTDIR=$(cd "$(realpath "$(dirname "$0")")"; cd ..; pwd)
- : ${TERMUX_BUILDER_IMAGE_NAME:=ghcr.io/termux-play-store/package-builder}
--: ${CONTAINER_NAME:=termux-package-builder}
-+: ${CONTAINER_NAME:=termux-generator-package-builder}
- : ${TERMUX_DOCKER_RUN_EXTRA_ARGS:=}
- : ${TERMUX_DOCKER_EXEC_EXTRA_ARGS:=}
- BUILDSCRIPT_NAME=build-package.sh
 @@ -92,7 +92,7 @@ if [ "$UNAME" = Darwin ]; then
  	SEC_OPT=""
  else
