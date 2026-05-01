@@ -78,12 +78,28 @@ on:
         description: "Specify plugin."
         required: false
 
+# Prevent concurrent runs of the same workflow to avoid conflicts
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-24.04
     steps:
       - name: Clone repository
         uses: actions/checkout@v4
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'gradle' # Automatically cache Gradle dependencies
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
       - name: Set --add
         if: "${{ github.event.inputs.add != '' }}"
         run: echo "ADDITIONAL_PACKAGES=--add ${{ github.event.inputs.add }}" >> $GITHUB_ENV

@@ -27,7 +27,7 @@ This script builds a [termux/termux-app](https://github.com/termux/termux-app) o
 
 - Docker
 - Android SDK
-- OpenJDK 17
+- OpenJDK 21
 - `git`
 - `patch`
 - `bash`
@@ -35,7 +35,7 @@ This script builds a [termux/termux-app](https://github.com/termux/termux-app) o
 #### Common Dependencies
 ```bash
 sudo apt update
-sudo apt install -y openjdk-17-jdk git patch
+sudo apt install -y openjdk-21-jdk git patch
 ```
 
 #### Android SDK (Ubuntu 20.04 and 22.04)
