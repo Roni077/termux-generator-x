@@ -102,6 +102,9 @@ jobs:
           distribution: 'temurin'
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
+      - name: Accept Android SDK licenses
+        run: |
+          yes | sdkmanager --licenses || true
       - name: Set --add
         if: "${{ github.event.inputs.add != '' }}"
         run: echo "ADDITIONAL_PACKAGES=--add ${{ github.event.inputs.add }}" >> $GITHUB_ENV
