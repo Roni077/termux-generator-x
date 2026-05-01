@@ -31,3 +31,8 @@ gradle-app.setting
 
 # plugin specific
 plugins/gradle-project/bin
+
+# Build and workflow logs
+*.log
+workflow_log.txt
+logs.txt
