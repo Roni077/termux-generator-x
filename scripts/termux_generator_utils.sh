@@ -9,15 +9,30 @@ portable_sed_i() {
 apply_patches() {
     local srcdir=$(realpath "$1")
     local targetdir=$(realpath "$2")
-    local patches=$(find "$srcdir" -type f | sort)
 
-    pushd "$targetdir"
+    if [ ! -d "$srcdir" ]; then
+        echo "[*] No patches directory found at $srcdir. Skipping."
+        return
+    fi
 
-    for patch in $patches; do
-        patch -p1 < "$patch"
-    done
+    pushd "$targetdir" > /dev/null
 
-    popd
+    # Find and sort patch files
+    local patches=$(find "$srcdir" -maxdepth 1 -name "*.patch" | sort)
+
+    if [ -z "$patches" ]; then
+        echo "[*] No .patch files found in $srcdir. Skipping."
+    else
+        for patch in $patches; do
+            echo "[*] Applying patch: $(basename "$patch")"
+            if ! patch -p1 < "$patch"; then
+                echo "[!] Failed to apply patch: $(basename "$patch")"
+                exit 1
+            fi
+        done
+    fi
+
+    popd > /dev/null
 }
 
 replace_termux_name() {
@@ -29,20 +44,24 @@ replace_termux_name() {
     local replacement_name_underscore="$(echo "$replacement_name" | tr . _)"
     local replacement_name_slash="$(echo "$replacement_name" | tr . /)"
 
-    pushd "$targetdir"
+    pushd "$targetdir" > /dev/null
     
-    # Nur Textdateien bearbeiten, um Fehler zu vermeiden
-    local file
-    find . -type f -exec file {} + | grep "text" | cut -d: -f1 | while read -r file; do
-        portable_sed_i -e "s|>Termux<|>$replacement_name<|g" \
-                       -e "s|\"Termux\"|\"$replacement_name\"|g" \
-                       -e "s|Termux:|$replacement_name:|g" \
-                       -e "s|com\.termux|$replacement_name|g" \
-                       -e "s|com_termux|$replacement_name_underscore|g" \
-                       -e '/http/!s|com/termux|'$replacement_name_slash'|g' "$file"
+    echo "[*] Replacing 'com.termux' with '$replacement_name' in $targetdir..."
+    
+    # Process only text files to avoid errors with binaries
+    # Using a more robust way to find text files
+    find . -type f -not -path '*/.*' | while read -r file; do
+        if file "$file" | grep -q "text"; then
+            portable_sed_i -e "s|>Termux<|>$replacement_name<|g" \
+                           -e "s|\"Termux\"|\"$replacement_name\"|g" \
+                           -e "s|Termux:|$replacement_name:|g" \
+                           -e "s|com\.termux|$replacement_name|g" \
+                           -e "s|com_termux|$replacement_name_underscore|g" \
+                           -e '/https\?:\/\//!s|com/termux|'$replacement_name_slash'|g' "$file"
+        fi
     done
 
-    popd
+    popd > /dev/null
 }
 
 # Funktion, um Ordner zu migrieren

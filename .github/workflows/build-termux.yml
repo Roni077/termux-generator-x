@@ -103,6 +103,11 @@ jobs:
         with:
           java-version: '21'
           distribution: 'temurin'
+      - name: Debug Java Info
+        run: |
+          echo "JAVA_HOME: $JAVA_HOME"
+          ls -l "$JAVA_HOME" || echo "JAVA_HOME directory not found"
+          java -version
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
       - name: Accept Android SDK licenses
