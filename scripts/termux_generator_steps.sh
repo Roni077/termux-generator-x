@@ -251,7 +251,7 @@ build_apps() {
     if [[ "$TERMUX_APP_TYPE" == "f-droid" ]]; then
         if [ -z "${DISABLE_TERMINAL}" ]; then
             pushd termux-app
-                ./gradlew $GRADLE_FLAGS publishReleasePublicationToMavenLocal
+                ( unset JAVA_HOME; ./gradlew $GRADLE_FLAGS publishReleasePublicationToMavenLocal )
             popd
         fi
         for app in *; do
@@ -287,7 +287,7 @@ build_apps() {
             (
                 echo "[*] Building $app in background..."
                 pushd "$app" > /dev/null
-                ./gradlew $GRADLE_FLAGS assembleDebug > "build-$app.log" 2>&1
+                ( unset JAVA_HOME; ./gradlew $GRADLE_FLAGS assembleDebug ) > "build-$app.log" 2>&1
                 if [ $? -eq 0 ]; then
                     echo "[+] $app build successful."
                 else

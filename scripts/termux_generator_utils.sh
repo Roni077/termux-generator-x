@@ -44,14 +44,19 @@ replace_termux_name() {
     local replacement_name_underscore="$(echo "$replacement_name" | tr . _)"
     local replacement_name_slash="$(echo "$replacement_name" | tr . /)"
 
+    if [ ! -d "$targetdir" ]; then
+        echo "[*] Target directory $targetdir not found. Skipping name replacement."
+        return
+    fi
+
     pushd "$targetdir" > /dev/null
     
     echo "[*] Replacing 'com.termux' with '$replacement_name' in $targetdir..."
     
     # Process only text files to avoid errors with binaries
-    # Using a more robust way to find text files
-    find . -type f -not -path '*/.*' | while read -r file; do
-        if file "$file" | grep -q "text"; then
+    # Using a more robust way to find text files and avoiding permission denied errors
+    find . -type f -not -path '*/.*' 2>/dev/null | while read -r file; do
+        if file "$file" 2>/dev/null | grep -q "text"; then
             portable_sed_i -e "s|>Termux<|>$replacement_name<|g" \
                            -e "s|\"Termux\"|\"$replacement_name\"|g" \
                            -e "s|Termux:|$replacement_name:|g" \

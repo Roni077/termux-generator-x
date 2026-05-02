@@ -108,6 +108,13 @@ jobs:
           echo "JAVA_HOME: $JAVA_HOME"
           ls -l "$JAVA_HOME" || echo "JAVA_HOME directory not found"
           java -version
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y dos2unix
+      - name: Fix line endings
+        run: |
+          find . -type f -name "*.sh" -exec dos2unix {} +
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
       - name: Accept Android SDK licenses
