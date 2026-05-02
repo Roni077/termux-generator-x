@@ -103,6 +103,11 @@ jobs:
         with:
           java-version: '21'
           distribution: 'temurin'
+      - name: Resolve JAVA_HOME
+        run: |
+          REAL_JAVA_HOME=$(readlink -f "$JAVA_HOME")
+          echo "JAVA_HOME=$REAL_JAVA_HOME" >> $GITHUB_ENV
+          echo "Resolved JAVA_HOME to $REAL_JAVA_HOME"
       - name: Debug Java Info
         run: |
           echo "JAVA_HOME: $JAVA_HOME"
@@ -198,3 +203,10 @@ jobs:
           path: |
             ./*.apk
             ./*.zip
+      - name: Upload Build Logs
+        if: always()
+        uses: actions/upload-artifact@v4.6.0
+        with:
+          name: build-logs
+          path: |
+            termux-apps-main/*/build-*.log
