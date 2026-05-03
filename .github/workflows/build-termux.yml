@@ -176,6 +176,13 @@ jobs:
         with:
           name: addon-apks
           path: ./*.apk
+      - name: Upload Build Logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-logs-addons
+          path: |
+            termux-apps-main/*/build-*.log
 
   # Job 3: Build main app (Terminal) after bootstraps are ready
   build-main-app:
