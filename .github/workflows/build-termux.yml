@@ -152,6 +152,12 @@ jobs:
         run: |
           REAL_JAVA_HOME=$(readlink -f "$JAVA_HOME")
           echo "JAVA_HOME=$REAL_JAVA_HOME" >> $GITHUB_ENV
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y dos2unix
+      - name: Fix line endings
+        run: find . -type f -name "*.sh" -exec dos2unix {} +
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
       - name: Accept Android SDK licenses
@@ -201,6 +207,12 @@ jobs:
         run: |
           REAL_JAVA_HOME=$(readlink -f "$JAVA_HOME")
           echo "JAVA_HOME=$REAL_JAVA_HOME" >> $GITHUB_ENV
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y dos2unix
+      - name: Fix line endings
+        run: find . -type f -name "*.sh" -exec dos2unix {} +
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
       - name: Accept Android SDK licenses

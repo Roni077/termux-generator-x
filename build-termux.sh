@@ -198,6 +198,9 @@ done
 
 TERMUX_GENERATOR_CONTAINER_NAME="$TERMUX_APP__PACKAGE_NAME-$TERMUX_APP_TYPE-package-builder"
 
+# Validierung
+check_names
+
 if [ -z "${DO_NOT_CLEAN}" ]; then
     clean_docker
     clean_artifacts
