@@ -24,8 +24,25 @@ apply_patches() {
         echo "[*] No .patch files found in $srcdir. Skipping."
     else
         for patch in $patches; do
+            # Peek at the patch to see which file it targets
+            # We look for the first line starting with --- a/ and extract the path
+            local target_in_patch=$(grep -m 1 "^--- a/" "$patch" | sed 's|^--- a/||')
+            
+            if [ -n "$target_in_patch" ]; then
+                # If the target file doesn't exist, this might be a patch for a disabled app
+                if [ ! -e "$target_in_patch" ]; then
+                    # Check if the parent directory exists
+                    local parent_dir=$(dirname "$target_in_patch")
+                    if [ "$parent_dir" != "." ] && [ ! -d "$parent_dir" ]; then
+                        echo "[*] Skipping patch $(basename "$patch") because target directory $parent_dir is missing."
+                        continue
+                    fi
+                fi
+            fi
+
             echo "[*] Applying patch: $(basename "$patch")"
-            if ! patch -p1 < "$patch"; then
+            # Using -N/--forward to ignore already applied or reversed patches
+            if ! patch -N -p1 < "$patch"; then
                 echo "[!] Failed to apply patch: $(basename "$patch")"
                 exit 1
             fi
@@ -55,7 +72,11 @@ replace_termux_name() {
     
     # Process only text files to avoid errors with binaries
     # Using a more robust way to find text files and avoiding permission denied errors
+    # We use a subshell to avoid exit-on-error if find finds nothing or has minor issues
     find . -type f -not -path '*/.*' 2>/dev/null | while read -r file; do
+        # Only process if file exists (safety)
+        [ -f "$file" ] || continue
+        
         if file "$file" 2>/dev/null | grep -q "text"; then
             portable_sed_i -e "s|>Termux<|>$replacement_name<|g" \
                            -e "s|\"Termux\"|\"$replacement_name\"|g" \
