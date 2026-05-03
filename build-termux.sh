@@ -24,6 +24,8 @@ DISABLE_BOOT=""
 DISABLE_STYLING=""
 DISABLE_GUI=""
 DISABLE_X11=""
+SKIP_DOWNLOAD=""
+SKIP_BOOTSTRAP_BUILD=""
 
 source "$TERMUX_GENERATOR_HOME/scripts/termux_generator_utils.sh"
 source "$TERMUX_GENERATOR_HOME/scripts/termux_generator_steps.sh"
@@ -75,6 +77,8 @@ show_usage() {
     echo " --disable-gui                    Disable building the GUI addon app."
     echo "                                  Currently, this option only affects builds of type f-droid."
     echo " --disable-x11                    Disable building the X11 addon app."
+    echo " --skip-download                  Skip downloading repositories (assumes they already exist)."
+    echo " --skip-bootstrap-build           Skip the Docker bootstrap build phase (useful when using artifacts)."
     echo " -d, --dirty                      Build without cleaning previous artifacts."
     echo
 }
@@ -195,24 +199,34 @@ done
 TERMUX_GENERATOR_CONTAINER_NAME="$TERMUX_APP__PACKAGE_NAME-$TERMUX_APP_TYPE-package-builder"
 
 if [ -z "${DO_NOT_CLEAN}" ]; then
-    # Validierung und Ausführung
-    check_names
     clean_docker
     clean_artifacts
+fi
+
+if [ -z "${SKIP_DOWNLOAD}" ]; then
     download
-    if [ -n "$TERMUX_GENERATOR_PLUGIN" ]; then
-        install_plugin
-    fi
-    patch_bootstraps
-    patch_apps
-    if [ -z "${DISABLE_X11}" ]; then
-        build_termux_x11
-        move_termux_x11_deb
-    fi
-    if [ -z "${DISABLE_BOOTSTRAP}" ]; then
-        build_bootstraps
-        move_bootstraps
-    fi
+fi
+
+if [ -n "$TERMUX_GENERATOR_PLUGIN" ]; then
+    install_plugin
+fi
+
+# Patches are always applied to ensure files are ready for any build phase
+patch_bootstraps
+patch_apps
+
+if [ -z "${DISABLE_X11}" ]; then
+    build_termux_x11
+    move_termux_x11_deb
+fi
+
+if [ -z "${DISABLE_BOOTSTRAP}" ] && [ -z "${SKIP_BOOTSTRAP_BUILD}" ]; then
+    build_bootstraps
+    move_bootstraps
+elif [ -z "${DISABLE_BOOTSTRAP}" ] && [ -n "${SKIP_BOOTSTRAP_BUILD}" ]; then
+    # We skipped the build, but we still might need to move downloaded artifacts
+    echo "[*] Skipping bootstrap build as requested. Moving any existing bootstraps..."
+    move_bootstraps
 fi
 
 if [[ "$TERMUX_APP_TYPE" == "f-droid" ]] || [ -z "${DISABLE_TERMINAL}" ]; then

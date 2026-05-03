@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - dev
   workflow_dispatch:
     inputs:
       add:
@@ -81,7 +82,6 @@ on:
         description: "Specify plugin."
         required: false
 
-# Prevent concurrent runs of the same workflow to avoid conflicts
 concurrency:
   group: build-${{ github.ref }}
   cancel-in-progress: true
@@ -93,7 +93,52 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
-  build:
+  # Job 1: Build bootstraps for each architecture in parallel
+  build-bootstraps:
+    if: "${{ github.event.inputs.bootstrap != 'false' }}"
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [aarch64, arm, x86_64, i686]
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@v4
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+      - name: Resolve JAVA_HOME
+        run: |
+          REAL_JAVA_HOME=$(readlink -f "$JAVA_HOME")
+          echo "JAVA_HOME=$REAL_JAVA_HOME" >> $GITHUB_ENV
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y dos2unix
+      - name: Fix line endings
+        run: find . -type f -name "*.sh" -exec dos2unix {} +
+      - name: Build Bootstrap (${{ matrix.arch }})
+        run: |
+          ./build-termux.sh \
+            ${{ github.event.inputs.add != '' && format('--add {0}', github.event.inputs.add) || '' }} \
+            ${{ github.event.inputs.name != '' && format('--name {0}', github.event.inputs.name) || '' }} \
+            ${{ github.event.inputs.type != '' && format('--type {0}', github.event.inputs.type) || '' }} \
+            --architectures ${{ matrix.arch }} \
+            ${{ github.event.inputs.bootstrap-second-stage == 'false' && '--disable-bootstrap-second-stage' || '' }} \
+            ${{ github.event.inputs.ssh-server == 'true' && '--enable-ssh-server' || '' }} \
+            ${{ github.event.inputs.plugin != '' && format('--plugin {0}', github.event.inputs.plugin) || '' }} \
+            --disable-terminal --disable-tasker --disable-float --disable-widget \
+            --disable-api --disable-boot --disable-styling --disable-gui --disable-x11
+      - name: Upload Bootstrap (${{ matrix.arch }})
+        uses: actions/upload-artifact@v4
+        with:
+          name: bootstrap-${{ matrix.arch }}
+          path: ./*.zip
+
+  # Job 2: Build addon apps in parallel
+  build-addons:
     runs-on: ubuntu-24.04
     steps:
       - name: Clone repository
@@ -107,106 +152,72 @@ jobs:
         run: |
           REAL_JAVA_HOME=$(readlink -f "$JAVA_HOME")
           echo "JAVA_HOME=$REAL_JAVA_HOME" >> $GITHUB_ENV
-          echo "Resolved JAVA_HOME to $REAL_JAVA_HOME"
-      - name: Debug Java Info
-        run: |
-          echo "JAVA_HOME: $JAVA_HOME"
-          ls -l "$JAVA_HOME" || echo "JAVA_HOME directory not found"
-          java -version
-      - name: Install dependencies
-        run: |
-          sudo apt update
-          sudo apt install -y dos2unix
-      - name: Fix line endings
-        run: |
-          find . -type f -name "*.sh" -exec dos2unix {} +
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
       - name: Accept Android SDK licenses
-        run: |
-          yes | sdkmanager --licenses || true
-      - name: Set --add
-        if: "${{ github.event.inputs.add != '' }}"
-        run: echo "ADDITIONAL_PACKAGES=--add ${{ github.event.inputs.add }}" >> $GITHUB_ENV
-      - name: Set --name
-        if: "${{ github.event.inputs.name != '' }}"
-        run: echo "TERMUX_APP__PACKAGE_NAME=--name ${{ github.event.inputs.name }}" >> $GITHUB_ENV
-      - name: Set --type
-        if: "${{ github.event.inputs.type != '' }}"
-        run: echo "TERMUX_APP_TYPE=--type ${{ github.event.inputs.type }}" >> $GITHUB_ENV
-      - name: Set --architectures
-        if: "${{ github.event.inputs.architectures != '' }}"
-        run: echo "BOOTSTRAP_ARCHITECTURES=--architectures ${{ github.event.inputs.architectures }}" >> $GITHUB_ENV
-      - name: Set --disable-bootstrap-second-stage
-        if: "${{ github.event.inputs.bootstrap-second-stage == 'false' }}"
-        run: echo "DISABLE_BOOTSTRAP_SECOND_STAGE=--disable-bootstrap-second-stage" >> $GITHUB_ENV
-      - name: Set --enable-ssh-server
-        if: "${{ github.event.inputs.ssh-server == 'true' }}"
-        run: echo "ENABLE_SSH_SERVER=--enable-ssh-server" >> $GITHUB_ENV
-      - name: Set --disable-bootstrap
-        if: "${{ github.event.inputs.bootstrap == 'false' }}"
-        run: echo "DISABLE_BOOTSTRAP=--disable-bootstrap" >> $GITHUB_ENV
-      - name: Set --disable-terminal
-        if: "${{ github.event.inputs.terminal == 'false' }}"
-        run: echo "DISABLE_TERMINAL=--disable-terminal" >> $GITHUB_ENV
-      - name: Set --disable-tasker
-        if: "${{ github.event.inputs.tasker == 'false' }}"
-        run: echo "DISABLE_TASKER=--disable-tasker" >> $GITHUB_ENV
-      - name: Set --disable-float
-        if: "${{ github.event.inputs.float == 'false' }}"
-        run: echo "DISABLE_FLOAT=--disable-float" >> $GITHUB_ENV
-      - name: Set --disable-widget
-        if: "${{ github.event.inputs.widget == 'false' }}"
-        run: echo "DISABLE_WIDGET=--disable-widget" >> $GITHUB_ENV
-      - name: Set --disable-api
-        if: "${{ github.event.inputs.api == 'false' }}"
-        run: echo "DISABLE_API=--disable-api" >> $GITHUB_ENV
-      - name: Set --disable-boot
-        if: "${{ github.event.inputs.boot == 'false' }}"
-        run: echo "DISABLE_BOOT=--disable-boot" >> $GITHUB_ENV
-      - name: Set --disable-styling
-        if: "${{ github.event.inputs.styling == 'false' }}"
-        run: echo "DISABLE_STYLING=--disable-styling" >> $GITHUB_ENV
-      - name: Set --disable-gui
-        if: "${{ github.event.inputs.gui == 'false' }}"
-        run: echo "DISABLE_GUI=--disable-gui" >> $GITHUB_ENV
-      - name: Set --disable-x11
-        if: "${{ github.event.inputs.x11 == 'false' }}"
-        run: echo "DISABLE_X11=--disable-x11" >> $GITHUB_ENV
-      - name: Set --plugin
-        if: "${{ github.event.inputs.plugin != '' }}"
-        run: echo "PLUGIN=--plugin ${{ github.event.inputs.plugin }}" >> $GITHUB_ENV
-      - name: Build Termux
+        run: yes | sdkmanager --licenses || true
+      - name: Build Addons
         run: |
           ./build-termux.sh \
-                $ADDITIONAL_PACKAGES \
-                $TERMUX_APP__PACKAGE_NAME \
-                $TERMUX_APP_TYPE \
-                $BOOTSTRAP_ARCHITECTURES \
-                $DISABLE_BOOTSTRAP_SECOND_STAGE \
-                $ENABLE_SSH_SERVER \
-                $DISABLE_BOOTSTRAP \
-                $DISABLE_TERMINAL \
-                $DISABLE_TASKER \
-                $DISABLE_FLOAT \
-                $DISABLE_WIDGET \
-                $DISABLE_API \
-                $DISABLE_BOOT \
-                $DISABLE_STYLING \
-                $DISABLE_GUI \
-                $DISABLE_X11 \
-                $PLUGIN
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4.6.0
+            ${{ github.event.inputs.name != '' && format('--name {0}', github.event.inputs.name) || '' }} \
+            ${{ github.event.inputs.type != '' && format('--type {0}', github.event.inputs.type) || '' }} \
+            ${{ github.event.inputs.plugin != '' && format('--plugin {0}', github.event.inputs.plugin) || '' }} \
+            --disable-bootstrap --disable-terminal \
+            ${{ github.event.inputs.tasker == 'false' && '--disable-tasker' || '' }} \
+            ${{ github.event.inputs.float == 'false' && '--disable-float' || '' }} \
+            ${{ github.event.inputs.widget == 'false' && '--disable-widget' || '' }} \
+            ${{ github.event.inputs.api == 'false' && '--disable-api' || '' }} \
+            ${{ github.event.inputs.boot == 'false' && '--disable-boot' || '' }} \
+            ${{ github.event.inputs.styling == 'false' && '--disable-styling' || '' }} \
+            ${{ github.event.inputs.gui == 'false' && '--disable-gui' || '' }} \
+            ${{ github.event.inputs.x11 == 'false' && '--disable-x11' || '' }}
+      - name: Upload Addon APKs
+        uses: actions/upload-artifact@v4
         with:
-          name: Termux APKs or bootstraps
-          path: |
-            ./*.apk
-            ./*.zip
-      - name: Upload Build Logs
-        if: always()
-        uses: actions/upload-artifact@v4.6.0
+          name: addon-apks
+          path: ./*.apk
+
+  # Job 3: Build main app (Terminal) after bootstraps are ready
+  build-main-app:
+    if: "${{ github.event.inputs.terminal != 'false' }}"
+    needs: build-bootstraps
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@v4
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
         with:
-          name: build-logs
-          path: |
-            termux-apps-main/*/build-*.log
+          java-version: '21'
+          distribution: 'temurin'
+      - name: Resolve JAVA_HOME
+        run: |
+          REAL_JAVA_HOME=$(readlink -f "$JAVA_HOME")
+          echo "JAVA_HOME=$REAL_JAVA_HOME" >> $GITHUB_ENV
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+      - name: Accept Android SDK licenses
+        run: yes | sdkmanager --licenses || true
+      - name: Download All Bootstraps
+        uses: actions/download-artifact@v4
+        with:
+          pattern: bootstrap-*
+          path: bootstraps-merge/
+      - name: Prepare Bootstraps for Script
+        run: |
+          mkdir -p termux-packages-main
+          find bootstraps-merge/ -name "*.zip" -exec cp {} termux-packages-main/ \;
+          ls -l termux-packages-main/
+      - name: Build Terminal App
+        run: |
+          ./build-termux.sh \
+            ${{ github.event.inputs.name != '' && format('--name {0}', github.event.inputs.name) || '' }} \
+            ${{ github.event.inputs.type != '' && format('--type {0}', github.event.inputs.type) || '' }} \
+            ${{ github.event.inputs.plugin != '' && format('--plugin {0}', github.event.inputs.plugin) || '' }} \
+            --skip-bootstrap-build \
+            --disable-tasker --disable-float --disable-widget --disable-api --disable-boot --disable-styling --disable-gui --disable-x11
+      - name: Upload Terminal APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: terminal-apk
+          path: ./*.apk
