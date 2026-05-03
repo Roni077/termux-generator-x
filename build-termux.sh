@@ -229,7 +229,15 @@ elif [ -z "${DISABLE_BOOTSTRAP}" ] && [ -n "${SKIP_BOOTSTRAP_BUILD}" ]; then
     move_bootstraps
 fi
 
-if [[ "$TERMUX_APP_TYPE" == "f-droid" ]] || [ -z "${DISABLE_TERMINAL}" ]; then
+# Only build apps if at least one app is enabled
+if [[ -z "${DISABLE_TERMINAL}" ]] || \
+   [[ -z "${DISABLE_TASKER}" ]] || \
+   [[ -z "${DISABLE_FLOAT}" ]] || \
+   [[ -z "${DISABLE_WIDGET}" ]] || \
+   [[ -z "${DISABLE_API}" ]] || \
+   [[ -z "${DISABLE_BOOT}" ]] || \
+   [[ -z "${DISABLE_STYLING}" ]] || \
+   [[ -z "${DISABLE_GUI}" ]]; then
     build_apps
     move_apks
 fi

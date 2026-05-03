@@ -253,15 +253,22 @@ move_bootstraps() {
 
 # Funktion, um die App zu bauen
 build_apps() {
-    pushd termux-apps-main
+    if [ ! -d "termux-apps-main" ]; then
+        echo "[*] termux-apps-main directory not found. Skipping app build."
+        return
+    fi
+    pushd termux-apps-main > /dev/null
 
     if [[ "$TERMUX_APP_TYPE" == "f-droid" ]]; then
-        if [ -z "${DISABLE_TERMINAL}" ]; then
-            pushd termux-app
+        if [ -z "${DISABLE_TERMINAL}" ] && [ -d "termux-app" ]; then
+            pushd termux-app > /dev/null
                 ( unset JAVA_HOME; ./gradlew $GRADLE_FLAGS publishReleasePublicationToMavenLocal )
-            popd
+            popd > /dev/null
         fi
         for app in *; do
+            # Skip if not a directory
+            [ -d "$app" ] || continue
+            
             if [[ "$app" == "termux-app" ]] && [[ -n "${DISABLE_TERMINAL}" ]]; then
                 continue
             fi
@@ -308,20 +315,23 @@ build_apps() {
         ./gradlew $GRADLE_FLAGS assembleDebug
     fi
 
-    popd
+    popd > /dev/null
 }
 
 # Funktion, um die APK zu kopieren
 move_apks() {
+    if [ ! -d "termux-apps-main" ]; then
+        return
+    fi
     if [[ "$TERMUX_APP_TYPE" == "f-droid" ]]; then
         local build_dir="app/build/outputs/apk/debug"
     else
         local build_dir="build/outputs/apk/debug"
     fi
 
-    if [ -z "${DISABLE_X11}" ]; then
+    if [ -z "${DISABLE_X11}" ] && [ -d "termux-apps-main/termux-x11" ]; then
         for apk in termux-apps-main/termux-x11/app/build/outputs/apk/debug/*.apk; do
-            mv "$apk" "$TERMUX_APP__PACKAGE_NAME-$TERMUX_APP_TYPE-$(basename $apk)"
+            [ -f "$apk" ] && mv "$apk" "$TERMUX_APP__PACKAGE_NAME-$TERMUX_APP_TYPE-$(basename $apk)"
         done
     fi
 
@@ -334,7 +344,7 @@ move_apks() {
         [[ -z "${DISABLE_STYLING}" ]] || \
         [[ -z "${DISABLE_GUI}" ]]; then
         for apk in termux-apps-main/*/"$build_dir"/*.apk; do
-            mv "$apk" "$TERMUX_APP__PACKAGE_NAME-$TERMUX_APP_TYPE-$(basename $apk)"
+            [ -f "$apk" ] && mv "$apk" "$TERMUX_APP__PACKAGE_NAME-$TERMUX_APP_TYPE-$(basename $apk)"
         done
     fi
 }
