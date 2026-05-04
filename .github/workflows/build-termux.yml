@@ -104,6 +104,11 @@ jobs:
     steps:
       - name: Clone repository
         uses: actions/checkout@v4
+      - name: Dev-only debug info
+        if: github.ref == 'refs/heads/dev'
+        run: |
+          echo "Running on dev branch - verbose mode"
+          set -x
       - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
@@ -144,6 +149,11 @@ jobs:
     steps:
       - name: Clone repository
         uses: actions/checkout@v4
+      - name: Dev-only debug info
+        if: github.ref == 'refs/heads/dev'
+        run: |
+          echo "Running on dev branch - verbose mode"
+          set -x
       - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
@@ -200,6 +210,11 @@ jobs:
     steps:
       - name: Clone repository
         uses: actions/checkout@v4
+      - name: Dev-only debug info
+        if: github.ref == 'refs/heads/dev'
+        run: |
+          echo "Running on dev branch - verbose mode"
+          set -x
       - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
