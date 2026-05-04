@@ -1,0 +1,9 @@
+2026-05-03T12:57:53.9210000Z Evaluating build-bootstraps.if
+2026-05-03T12:57:53.9210000Z Evaluating: (success() && ((github.event.inputs.bootstrap != 'false')))
+2026-05-03T12:57:53.9210000Z Expanded: (true && ('true' != 'false'))
+2026-05-03T12:57:53.9210000Z Result: true
+2026-05-03T12:57:53.9300000Z Job is about to start running on the hosted runner: GitHub Actions 1000000115
+2026-05-03T12:57:53.9240000Z Requested labels: ubuntu-24.04
+2026-05-03T12:57:53.9240000Z Job defined at: Roni077/termux-generator-x/.github/workflows/build-termux.yml@refs/heads/dev
+2026-05-03T12:57:53.9240000Z Waiting for a runner to pick up this job...
+2026-05-03T12:57:53.9300000Z Job is waiting for a hosted runner to come online.

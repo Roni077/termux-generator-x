@@ -1,0 +1,4 @@
+2026-05-03T14:14:25.0630000Z Evaluating build-main-app.if
+2026-05-03T14:14:25.0630000Z Evaluating: (success() && ((github.event.inputs.terminal != 'false')))
+2026-05-03T14:14:25.0630000Z Expanded: (false && (github.event.inputs.terminal != 'false'))
+2026-05-03T14:14:25.0630000Z Result: false
