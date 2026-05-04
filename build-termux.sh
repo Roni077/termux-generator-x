@@ -89,6 +89,12 @@ while (($# > 0)); do
         -d|--dirty)
             DO_NOT_CLEAN=1
             ;;
+        --skip-download)
+            SKIP_DOWNLOAD=1
+            ;;
+        --skip-bootstrap-build)
+            SKIP_BOOTSTRAP_BUILD=1
+            ;;
         -h|--help)
             show_usage
             exit 0
