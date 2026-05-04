@@ -243,6 +243,14 @@ move_bootstraps() {
     else
         local app_assets_dir="src/main/assets/"
     fi
+
+    # Check if bootstrap files exist before trying to move them
+    local bootstrap_files=(termux-packages-main/bootstrap-*.zip)
+    if [ ! -e "${bootstrap_files[0]}" ]; then
+        echo "[*] No bootstrap files found in termux-packages-main/. Skipping move."
+        return 0
+    fi
+
     if [ -z "${DISABLE_TERMINAL}" ]; then
         mkdir -p "termux-apps-main/termux-app/$app_assets_dir"
         mv termux-packages-main/bootstrap-*.zip "termux-apps-main/termux-app/$app_assets_dir"
