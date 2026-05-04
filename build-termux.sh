@@ -134,7 +134,7 @@ while (($# > 0)); do
             else
                 echo "[!] Option '--architectures' requires an argument."
                 show_usage
-                return 1
+                exit 1
             fi
             ;;
         -p|--plugin)
