@@ -1,0 +1,245 @@
+name: Generate Termux application
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+  workflow_dispatch:
+    inputs:
+      add:
+        description: "Include additional packages in bootstrap in a comma-separated list."
+        required: false
+      name:
+        description: "Specify TERMUX_APP__PACKAGE_NAME name."
+        required: false
+      type:
+        description: "Specify the Termux project to fork [f-droid, play-store]. Defaults to f-droid."
+        required: false
+      architectures:
+        description: "Specify the bootstrap architectures to include in a comma-separated list."
+        required: false
+      bootstrap-second-stage:
+        description: "Automatically execute termux-bootstrap-second-stage.sh."
+        required: false
+        type: boolean
+        default: true
+      ssh-server:
+        description: "Bundle an SSH server with the default password 'changeme'."
+        required: false
+        type: boolean
+      bootstrap:
+        description: "Build the bootstrap(s)."
+        required: false
+        type: boolean
+        default: true
+      terminal:
+        description: "Build the Terminal app."
+        required: false
+        type: boolean
+        default: true
+      tasker:
+        description: "Build the Tasker addon app."
+        required: false
+        type: boolean
+        default: true
+      float:
+        description: "Build the Float addon app."
+        required: false
+        type: boolean
+        default: true
+      widget:
+        description: "Build the Widget addon app."
+        required: false
+        type: boolean
+        default: true
+      api:
+        description: "Build the API addon app."
+        required: false
+        type: boolean
+        default: true
+      boot:
+        description: "Build the Boot addon app."
+        required: false
+        type: boolean
+        default: true
+      styling:
+        description: "Build the Styling addon app."
+        required: false
+        type: boolean
+        default: true
+      gui:
+        description: "Build the GUI addon app."
+        required: false
+        type: boolean
+        default: true
+      x11:
+        description: "Build the X11 addon app."
+        required: false
+        type: boolean
+        default: true
+      plugin:
+        description: "Specify plugin."
+        required: false
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  # Job 1: Build bootstraps for each architecture in parallel
+  build-bootstraps:
+    if: "${{ github.event.inputs.bootstrap != 'false' }}"
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [aarch64, arm, x86_64, i686]
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@v4
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+      - name: Resolve JAVA_HOME
+        run: |
+          REAL_JAVA_HOME=$(readlink -f "$JAVA_HOME")
+          echo "JAVA_HOME=$REAL_JAVA_HOME" >> $GITHUB_ENV
+      - name: Install dependencies
+        run: |
+          sudo sed -i 's/archive.ubuntu.com/azure.archive.ubuntu.com/g' /etc/apt/sources.list
+          sudo apt update
+          sudo apt install -y dos2unix
+      - name: Fix line endings
+        run: find . -type f -name "*.sh" -exec dos2unix {} +
+      - name: Build Bootstrap (${{ matrix.arch }})
+        run: |
+          ./build-termux.sh \
+            ${{ github.event.inputs.add != '' && format('--add {0}', github.event.inputs.add) || '' }} \
+            ${{ github.event.inputs.name != '' && format('--name {0}', github.event.inputs.name) || '' }} \
+            ${{ github.event.inputs.type != '' && format('--type {0}', github.event.inputs.type) || '' }} \
+            --architectures ${{ matrix.arch }} \
+            ${{ github.event.inputs.bootstrap-second-stage == 'false' && '--disable-bootstrap-second-stage' || '' }} \
+            ${{ github.event.inputs.ssh-server == 'true' && '--enable-ssh-server' || '' }} \
+            ${{ github.event.inputs.plugin != '' && format('--plugin {0}', github.event.inputs.plugin) || '' }} \
+            --disable-terminal --disable-tasker --disable-float --disable-widget \
+            --disable-api --disable-boot --disable-styling --disable-gui --disable-x11
+      - name: Upload Bootstrap (${{ matrix.arch }})
+        uses: actions/upload-artifact@v4
+        with:
+          name: bootstrap-${{ matrix.arch }}
+          path: ./*.zip
+
+  # Job 2: Build addon apps in parallel
+  build-addons:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@v4
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+      - name: Resolve JAVA_HOME
+        run: |
+          REAL_JAVA_HOME=$(readlink -f "$JAVA_HOME")
+          echo "JAVA_HOME=$REAL_JAVA_HOME" >> $GITHUB_ENV
+      - name: Install dependencies
+        run: |
+          sudo sed -i 's/archive.ubuntu.com/azure.archive.ubuntu.com/g' /etc/apt/sources.list
+          sudo apt update
+          sudo apt install -y dos2unix
+      - name: Fix line endings
+        run: find . -type f -name "*.sh" -exec dos2unix {} +
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+      - name: Accept Android SDK licenses
+        run: yes | sdkmanager --licenses || true
+      - name: Build Addons
+        run: |
+          ./build-termux.sh \
+            ${{ github.event.inputs.name != '' && format('--name {0}', github.event.inputs.name) || '' }} \
+            ${{ github.event.inputs.type != '' && format('--type {0}', github.event.inputs.type) || '' }} \
+            ${{ github.event.inputs.plugin != '' && format('--plugin {0}', github.event.inputs.plugin) || '' }} \
+            --disable-bootstrap --disable-terminal \
+            ${{ github.event.inputs.tasker == 'false' && '--disable-tasker' || '' }} \
+            ${{ github.event.inputs.float == 'false' && '--disable-float' || '' }} \
+            ${{ github.event.inputs.widget == 'false' && '--disable-widget' || '' }} \
+            ${{ github.event.inputs.api == 'false' && '--disable-api' || '' }} \
+            ${{ github.event.inputs.boot == 'false' && '--disable-boot' || '' }} \
+            ${{ github.event.inputs.styling == 'false' && '--disable-styling' || '' }} \
+            ${{ github.event.inputs.gui == 'false' && '--disable-gui' || '' }} \
+            ${{ github.event.inputs.x11 == 'false' && '--disable-x11' || '' }}
+      - name: Upload Addon APKs
+        uses: actions/upload-artifact@v4
+        with:
+          name: addon-apks
+          path: ./*.apk
+      - name: Upload Build Logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-logs-addons
+          path: |
+            termux-apps-main/*/build-*.log
+
+  # Job 3: Build main app (Terminal) after bootstraps are ready
+  build-main-app:
+    if: "${{ github.event.inputs.terminal != 'false' }}"
+    needs: build-bootstraps
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@v4
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+      - name: Resolve JAVA_HOME
+        run: |
+          REAL_JAVA_HOME=$(readlink -f "$JAVA_HOME")
+          echo "JAVA_HOME=$REAL_JAVA_HOME" >> $GITHUB_ENV
+      - name: Install dependencies
+        run: |
+          sudo sed -i 's/archive.ubuntu.com/azure.archive.ubuntu.com/g' /etc/apt/sources.list
+          sudo apt update
+          sudo apt install -y dos2unix
+      - name: Fix line endings
+        run: find . -type f -name "*.sh" -exec dos2unix {} +
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+      - name: Accept Android SDK licenses
+        run: yes | sdkmanager --licenses || true
+      - name: Download All Bootstraps
+        uses: actions/download-artifact@v4
+        with:
+          pattern: bootstrap-*
+          path: bootstraps-merge/
+      - name: Prepare Bootstraps for Script
+        run: |
+          mkdir -p termux-packages-main
+          find bootstraps-merge/ -name "*.zip" -exec cp {} termux-packages-main/ \;
+          ls -l termux-packages-main/
+      - name: Build Terminal App
+        run: |
+          ./build-termux.sh \
+            ${{ github.event.inputs.name != '' && format('--name {0}', github.event.inputs.name) || '' }} \
+            ${{ github.event.inputs.type != '' && format('--type {0}', github.event.inputs.type) || '' }} \
+            ${{ github.event.inputs.plugin != '' && format('--plugin {0}', github.event.inputs.plugin) || '' }} \
+            --skip-bootstrap-build \
+            --disable-tasker --disable-float --disable-widget --disable-api --disable-boot --disable-styling --disable-gui --disable-x11
+      - name: Upload Terminal APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: terminal-apk
+          path: ./*.apk
