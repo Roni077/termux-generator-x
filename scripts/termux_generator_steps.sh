@@ -115,18 +115,20 @@ patch_bootstraps() {
     local bashrc="termux-packages-main/packages/bash/etc-bash.bashrc"
 
     if [[ -n "$ENABLE_SSH_SERVER" ]]; then
-        cat <<- EOF >> "$bashrc"
-            if [ ! -f "\$HOME/.termux/boot/start-sshd" ]; then
-                mkdir -p "\$HOME/.termux/boot"
-                echo '#!/data/data/$TERMUX_APP__PACKAGE_NAME/files/usr/bin/sh' > "\$HOME/.termux/boot/start-sshd"
-                echo '. /data/data/$TERMUX_APP__PACKAGE_NAME/files/usr/etc/bash.bashrc' >> "\$HOME/.termux/boot/start-sshd"
-                chmod +x "\$HOME/.termux/boot/start-sshd"
-            fi
-            if [ ! -f "\$HOME/.termux_authinfo" ]; then
-                printf '$DEFAULT_PASSWORD\n$DEFAULT_PASSWORD' | passwd
-            fi
-            sshd
+        if ! grep -q "start-sshd" "$bashrc" 2>/dev/null; then
+            cat <<- EOF >> "$bashrc"
+                if [ ! -f "\$HOME/.termux/boot/start-sshd" ]; then
+                    mkdir -p "\$HOME/.termux/boot"
+                    echo '#!/data/data/$TERMUX_APP__PACKAGE_NAME/files/usr/bin/sh' > "\$HOME/.termux/boot/start-sshd"
+                    echo '. /data/data/$TERMUX_APP__PACKAGE_NAME/files/usr/etc/bash.bashrc' >> "\$HOME/.termux/boot/start-sshd"
+                    chmod +x "\$HOME/.termux/boot/start-sshd"
+                fi
+                if [ ! -f "\$HOME/.termux_authinfo" ]; then
+                    printf '$DEFAULT_PASSWORD\n$DEFAULT_PASSWORD' | passwd
+                fi
+                sshd
 EOF
+        fi
     fi
 
     cp -f "$TERMUX_GENERATOR_HOME/scripts/termux_generator_utils.sh" termux-packages-main/scripts/
@@ -262,7 +264,10 @@ build_apps() {
     if [[ "$TERMUX_APP_TYPE" == "f-droid" ]]; then
         if [ -z "${DISABLE_TERMINAL}" ] && [ -d "termux-app" ]; then
             pushd termux-app > /dev/null
-                ( unset JAVA_HOME; ./gradlew $GRADLE_FLAGS publishReleasePublicationToMavenLocal )
+                OLD_JAVA_HOME="$JAVA_HOME"
+                unset JAVA_HOME
+                ./gradlew $GRADLE_FLAGS publishReleasePublicationToMavenLocal
+                export JAVA_HOME="$OLD_JAVA_HOME"
             popd > /dev/null
         fi
         for app in *; do
@@ -301,8 +306,12 @@ build_apps() {
             (
                 echo "[*] Building $app in background..."
                 pushd "$app" > /dev/null
-                ( unset JAVA_HOME; ./gradlew $GRADLE_FLAGS assembleDebug ) > "build-$app.log" 2>&1
-                if [ $? -eq 0 ]; then
+                OLD_JAVA_HOME="$JAVA_HOME"
+                unset JAVA_HOME
+                ./gradlew $GRADLE_FLAGS assembleDebug > "build-$app.log" 2>&1
+                BUILD_RESULT=$?
+                export JAVA_HOME="$OLD_JAVA_HOME"
+                if [ $BUILD_RESULT -eq 0 ]; then
                     echo "[+] $app build successful."
                 else
                     echo "[!] $app build failed. Check termux-apps-main/$app/build-$app.log"

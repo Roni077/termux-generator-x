@@ -36,3 +36,4 @@ plugins/gradle-project/bin
 *.log
 workflow_log.txt
 logs.txt
+logs_*/
